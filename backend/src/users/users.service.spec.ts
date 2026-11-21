@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Test } from '@nestjs/testing';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MongoMemoryServer, } from 'mongodb-memory-server';
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, describe, it } from 'node:test';
 import { User, UserSchema, UserStatus } from './schemas/user.schema';
@@ -9,11 +9,12 @@ import { UsersService } from './users.service';
 
 describe('UsersService (Domain Invariants)', () => {
   let mongod: MongoMemoryServer;
+  let moduleRef: TestingModule;
   let usersService: UsersService;
 
   before(async () => {
     mongod = await MongoMemoryServer.create();
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(mongod.getUri()),
         MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
@@ -25,13 +26,14 @@ describe('UsersService (Domain Invariants)', () => {
   });
 
   beforeEach(async () => {
-    const paginated = await usersService.findAllPaginated(1, 50);
+    const paginated = await usersService.findWithPagination(1, 50);
     for (const user of paginated.items) {
       await usersService.remove(user.id);
     }
   });
 
   after(async () => {
+    await moduleRef.close();
     await mongod.stop();
   });
 
@@ -137,8 +139,8 @@ describe('UsersService (Domain Invariants)', () => {
       });
     }
 
-    const page1 = await usersService.findAllPaginated(1, 6);
-    const page2 = await usersService.findAllPaginated(2, 6);
+    const page1 = await usersService.findWithPagination(1, 6);
+    const page2 = await usersService.findWithPagination(2, 6);
 
     assert.equal(page1.items.length, 6);
     assert.equal(page1.total, 8);

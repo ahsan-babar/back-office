@@ -1,6 +1,6 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
@@ -9,14 +9,15 @@ import { UsersService } from '../users/users.service';
 import { Session, SessionSchema } from './schemas/session.schema';
 import { SessionsService } from './sessions.service';
 
-describe('SessionsService (Domain Invariants)', () => {
+describe('SessionsService', () => {
   let mongod: MongoMemoryServer;
+  let moduleRef: TestingModule; 
   let usersService: UsersService;
   let sessionsService: SessionsService;
 
   before(async () => {
     mongod = await MongoMemoryServer.create();
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       imports: [
         MongooseModule.forRoot(mongod.getUri()),
         MongooseModule.forFeature([
@@ -32,6 +33,7 @@ describe('SessionsService (Domain Invariants)', () => {
   });
 
   after(async () => {
+    await moduleRef.close();
     await mongod.stop();
   });
 
