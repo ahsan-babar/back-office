@@ -24,16 +24,16 @@ export type UserDocument = HydratedDocument<User>;
 export class User {
   id: string;
 
-  @Prop({ required: true, trim: true })
+  @Prop({ type: String, required: true, trim: true })
   firstName: string;
 
-  @Prop({ required: true, trim: true })
+  @Prop({ type: String, required: true, trim: true })
   lastName: string;
 
-  @Prop({ required: true, unique: true, lowercase: true, trim: true, index: true })
+  @Prop({ type: String, required: true, unique: true, lowercase: true, trim: true, index: true })
   email: string;
 
-  @Prop({ required: true, select: false })
+  @Prop({ type: String, required: true, select: false })
   passwordHash: string;
 
   @Prop({
