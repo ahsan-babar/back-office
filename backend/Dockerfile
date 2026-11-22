@@ -18,7 +18,7 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY backend/package.json ./backend/
 
-RUN npm ci --omit=dev --workspace=backend --include-workspace-root && npm cache clean --force
+RUN npm ci --omit=dev --ignore-scripts --workspace=backend --include-workspace-root && npm cache clean --force
 
 COPY --from=builder /app/backend/dist ./backend/dist
 
