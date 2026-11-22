@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MongoMemoryServer, } from 'mongodb-memory-server';
@@ -147,4 +147,82 @@ describe('UsersService (Domain Invariants)', () => {
     assert.equal(page1.totalPages, 2);
     assert.equal(page2.items.length, 2);
   });
+
+  it('verifies valid passwords and rejects wrong or malformed hashes', async () => {
+    const user = await usersService.create({
+      firstName: 'Verify',
+      lastName: 'Tester',
+      email: 'verify@example.com',
+      password: 'CorrectPassword123',
+    });
+
+    const userWithHash = await usersService.findByEmailWithPassword('verify@example.com');
+    assert.ok(userWithHash);
+    assert.equal(
+      await usersService.verifyPassword('CorrectPassword123', userWithHash.passwordHash),
+      true,
+    );
+    assert.equal(
+      await usersService.verifyPassword('WrongPassword', userWithHash.passwordHash),
+      false,
+    );
+    assert.equal(await usersService.verifyPassword('any', 'malformed-hash'), false);
+    assert.equal(await usersService.verifyPassword('any', 'salt:deadbeef'), false);
+    assert.equal(user.email, 'verify@example.com');
+  });
+
+  it('rejects whitespace-only firstName or lastName on create and update', async () => {
+    await assert.rejects(
+      () =>
+        usersService.create({
+          firstName: '   ',
+          lastName: 'Valid',
+          email: 'blank@example.com',
+          password: 'Password123!',
+        }),
+      BadRequestException,
+    );
+
+    const user = await usersService.create({
+      firstName: 'Valid',
+      lastName: 'Name',
+      email: 'validname@example.com',
+      password: 'Password123!',
+    });
+
+    await assert.rejects(
+      () => usersService.update(user.id, { lastName: '   ' }),
+      BadRequestException,
+    );
+  });
+
+  it('rejects duplicate email when updating an existing user', async () => {
+    await usersService.create({
+      firstName: 'First',
+      lastName: 'User',
+      email: 'first@example.com',
+      password: 'Password123!',
+    });
+    const second = await usersService.create({
+      firstName: 'Second',
+      lastName: 'User',
+      email: 'second@example.com',
+      password: 'Password123!',
+    });
+
+    await assert.rejects(
+      () => usersService.update(second.id, { email: 'FIRST@example.com' }),
+      ConflictException,
+    );
+  });
+
+  it('throws NotFoundException for malformed or non-existent ObjectIds on findById and remove', async () => {
+    const nonExistentId = '507f1f77bcf86cd799439011';
+
+    await assert.rejects(() => usersService.findById('not-an-object-id'), NotFoundException);
+    await assert.rejects(() => usersService.findById(nonExistentId), NotFoundException);
+    await assert.rejects(() => usersService.remove('not-an-object-id'), NotFoundException);
+    await assert.rejects(() => usersService.remove(nonExistentId), NotFoundException);
+  });
+
 });
