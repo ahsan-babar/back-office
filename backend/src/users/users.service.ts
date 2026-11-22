@@ -12,6 +12,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { IUsersService, PaginatedUsers } from './interfaces/users-service.interface';
 import { User, UserDocument, UserStatus } from './schemas/user.schema';
+import { PAGINATION_DEFAULTS, PASSWORD_CONFIG } from '../common/constants';
 
 const scrypt = promisify(scryptCallback);
 
@@ -22,8 +23,8 @@ export class UsersService implements IUsersService {
   ) { }
 
   async hashPassword(plainPassword: string): Promise<string> {
-    const salt = randomBytes(16).toString('hex');
-    const derivedKey = (await scrypt(plainPassword, salt, 64)) as Buffer;
+    const salt = randomBytes(PASSWORD_CONFIG.SALT_BYTES).toString('hex');
+    const derivedKey = (await scrypt(plainPassword, salt, PASSWORD_CONFIG.KEY_LENGTH)) as Buffer;
     return `${salt}:${derivedKey.toString('hex')}`;
   }
 
@@ -31,7 +32,7 @@ export class UsersService implements IUsersService {
     const [salt, keyHex] = storedHash.split(':');
     if (!salt || !keyHex) return false;
     const keyBuffer = Buffer.from(keyHex, 'hex');
-    const derivedKey = (await scrypt(plainPassword, salt, 64)) as Buffer;
+    const derivedKey = (await scrypt(plainPassword, salt, PASSWORD_CONFIG.KEY_LENGTH)) as Buffer;
     if (keyBuffer.length !== derivedKey.length) return false;
     return timingSafeEqual(keyBuffer, derivedKey);
   }
@@ -56,9 +57,9 @@ export class UsersService implements IUsersService {
     return created.save();
   }
 
-  async findWithPagination(page = 1, limit = 6): Promise<PaginatedUsers> {
+  async findWithPagination(page: number = PAGINATION_DEFAULTS.DEFAULT_PAGE, limit: number = PAGINATION_DEFAULTS.DEFAULT_LIMIT): Promise<PaginatedUsers> {
     const safePage = Math.max(1, Math.floor(page));
-    const safeLimit = Math.max(1, Math.min(50, Math.floor(limit)));
+    const safeLimit = Math.max(1, Math.min(PAGINATION_DEFAULTS.MAX_LIMIT, Math.floor(limit)));
     const skip = (safePage - 1) * safeLimit;
 
     const [items, total] = await Promise.all([
