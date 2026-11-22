@@ -1,3 +1,4 @@
+import { ApiTags, ApiSecurity } from '@nestjs/swagger'
 import {
   Body,
   Controller,
@@ -8,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { } from '@nestjs/swagger'
 import { ActiveSessionContext } from '../sessions/interfaces/sessions-service.interface';
 import { SessionsService } from '../sessions/sessions.service';
 import { UserStatus } from '../users/schemas/user.schema';
@@ -16,7 +18,9 @@ import { CurrentSession } from './decorators/current-session.decorator';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 import { SessionGuard } from './guards/session.guard';
+import { SESSION_HEADER_KEY } from '../common/constants'
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -54,6 +58,7 @@ export class AuthController {
     return { session, user };
   }
 
+  @ApiSecurity(SESSION_HEADER_KEY)
   @Get('me')
   @UseGuards(SessionGuard)
   getCurrentSession(@CurrentSession() auth: ActiveSessionContext) {

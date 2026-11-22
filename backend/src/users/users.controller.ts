@@ -1,3 +1,4 @@
+import { ApiTags, ApiSecurity, ApiQuery } from '@nestjs/swagger'
 import {
   Body,
   Controller,
@@ -19,10 +20,12 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserStatus } from './schemas/user.schema';
 import { UsersService } from './users.service';
-import { PAGINATION_DEFAULTS } from '../common/constants';
+import { PAGINATION_DEFAULTS, SESSION_HEADER_KEY } from '../common/constants';
 
 @Controller('users')
 @UseGuards(SessionGuard)
+@ApiTags('Users')
+@ApiSecurity(SESSION_HEADER_KEY)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
@@ -35,6 +38,8 @@ export class UsersController {
   }
 
   @Get()
+  @ApiQuery({ name: 'page', required: false, example: PAGINATION_DEFAULTS.DEFAULT_PAGE })
+  @ApiQuery({ name: 'limit', required: false, example: PAGINATION_DEFAULTS.DEFAULT_LIMIT })
   findAll(
     @Query('page', new DefaultValuePipe(PAGINATION_DEFAULTS.DEFAULT_PAGE), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(PAGINATION_DEFAULTS.DEFAULT_LIMIT), ParseIntPipe) limit: number,

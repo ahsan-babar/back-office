@@ -23,6 +23,7 @@ export const APP_DEFAULTS = {
   CORS_ORIGIN: 'http://localhost:5173',
   MONGODB_URI: 'mongodb://localhost:27017/back-office',
   API_GLOBAL_PREFIX: 'api',
+  SWAGGER_PATH: 'api/docs',
 } as const;
 
 /** Standardized domain error messages for consistent API responses & tests. */
