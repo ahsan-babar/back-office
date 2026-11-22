@@ -1,9 +1,8 @@
 {
-    "$schema": "https://schemastore.org",
-    "collection": "@nestjs/schematics",
-    "sourceRoot": "src",
-    "compilerOptions": {
-      "deleteOutDir": true
-    }
+  "$schema": "https://schemastore.org",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "src",
+  "compilerOptions": {
+    "deleteOutDir": true
   }
-  
+}
