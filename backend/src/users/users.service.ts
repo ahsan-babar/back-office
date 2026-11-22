@@ -12,7 +12,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { IUsersService, PaginatedUsers } from './interfaces/users-service.interface';
 import { User, UserDocument, UserStatus } from './schemas/user.schema';
-import { PAGINATION_DEFAULTS, PASSWORD_CONFIG } from '../common/constants';
+import { PAGINATION_DEFAULTS, PASSWORD_CONFIG, ERROR_MESSAGES } from '../common/constants';
 
 const scrypt = promisify(scryptCallback);
 
@@ -45,9 +45,16 @@ export class UsersService implements IUsersService {
     }
 
     const passwordHash = await this.hashPassword(dto.password);
+    const firstName = dto.firstName.trim();
+    const lastName = dto.lastName.trim();
+
+    if(!firstName || !lastName){
+      throw new BadRequestException(ERROR_MESSAGES.BLANK_NAME_NOT_ALLOWED);
+    }
+
     const created = new this.userModel({
-      firstName: dto.firstName.trim(),
-      lastName: dto.lastName.trim(),
+      firstName,
+      lastName,
       email: normalizedEmail,
       passwordHash,
       status: dto.status ?? UserStatus.ACTIVE,
@@ -136,6 +143,11 @@ export class UsersService implements IUsersService {
     if (dto.lastName !== undefined) {
       user.lastName = dto.lastName.trim();
     }
+
+    if (!user.firstName || !user.lastName) {
+      throw new BadRequestException(ERROR_MESSAGES.BLANK_NAME_NOT_ALLOWED);
+    }
+
     if (dto.status !== undefined) {
       user.status = dto.status;
     }
