@@ -6,7 +6,8 @@
       "build": "nest build",
       "start": "node dist/main",
       "start:dev": "nest start --watch",
-      "test": "nest build && node --test --test-isolation=none 'dist/**/*.spec.js'"
+      "test": "nest build && node --test --test-isolation=none 'dist/**/*.spec.js'",
+      "test:cov": "nest build && node --test --test-isolation=none --experimental-test-coverage --test-coverage-exclude='dist/**/*.spec.js' 'dist/**/*.spec.js'"  
     },
     "dependencies": {
       "@nestjs/common": "^11.0.0",

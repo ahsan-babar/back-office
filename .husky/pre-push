@@ -1,0 +1,1 @@
+npm --workspace=backend run build && npm run test:backend
