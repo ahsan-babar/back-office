@@ -22,21 +22,31 @@ import { UserStatus } from './schemas/user.schema';
 import { UsersService } from './users.service';
 import { PAGINATION_DEFAULTS, SESSION_HEADER_KEY } from '../common/constants';
 
-@Controller('users')
-@UseGuards(SessionGuard)
+/**
+ * Protected back-office CRUD endpoints for managing users.
+ * All routes require a valid `x-session-id` header enforced by {@link SessionGuard}.
+ */
 @ApiTags('Users')
 @ApiSecurity(SESSION_HEADER_KEY)
+@Controller('users')
+@UseGuards(SessionGuard)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
     private readonly sessionsService: SessionsService,
   ) { }
 
+  /**
+   * Creates a new user record (defaults to `active` status unless specified).
+   */
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
+  /**
+   * Returns a paginated list of users (`6` items per page by default).
+   */  
   @Get()
   @ApiQuery({ name: 'page', required: false, example: PAGINATION_DEFAULTS.DEFAULT_PAGE })
   @ApiQuery({ name: 'limit', required: false, example: PAGINATION_DEFAULTS.DEFAULT_LIMIT })
@@ -47,11 +57,18 @@ export class UsersController {
     return this.usersService.findWithPagination(page, limit);
   }
 
+  /**
+   * Retrieves a single user by ID.
+   */  
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usersService.findById(id);
   }
 
+  /**
+   * Updates mutable user attributes and immediately revokes all open sessions
+   * if the user's status transitions to `inactive`.
+   */
   @Patch(':id')
   async update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     const updated = await this.usersService.update(id, dto);
@@ -61,6 +78,9 @@ export class UsersController {
     return updated;
   }
 
+  /**
+   * Revokes all active sessions for the user and permanently deletes the user record.
+   */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async remove(@Param('id') id: string) {

@@ -13,6 +13,10 @@ export interface AuthenticatedRequest extends Request {
   auth?: ActiveSessionContext;
 }
 
+/**
+ * Route guard that authenticates incoming requests via the `x-session-id` HTTP header.
+ * Attaches the resolved `{ session, user }` context to `request.auth` for downstream handlers.
+ */
 @Injectable()
 export class SessionGuard implements CanActivate {
   constructor(private readonly sessionsService: SessionsService) { }

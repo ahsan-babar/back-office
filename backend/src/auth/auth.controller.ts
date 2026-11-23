@@ -20,6 +20,9 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { SessionGuard } from './guards/session.guard';
 import { SESSION_HEADER_KEY } from '../common/constants'
 
+/**
+ * Handles public registration, credential sign-in, and active session inspection.
+ */
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
@@ -28,6 +31,10 @@ export class AuthController {
     private readonly sessionsService: SessionsService,
   ) { }
 
+  /**
+   * Registers a new active user account and opens an initial authenticated session,
+   * setting `loginsCounter` to `1`.
+   */
   @Post('signup')
   async signUp(@Body() dto: SignUpDto) {
     const createdUser = await this.usersService.create({
@@ -38,6 +45,13 @@ export class AuthController {
     return { session, user };
   }
 
+  /**
+   * Verifies email and password credentials, creates a new session,
+   * and atomically increments `loginsCounter`.
+   *
+   * @throws {UnauthorizedException} If credentials are invalid.
+   * @throws {ForbiddenException} If the user account is `inactive`.
+   */
   @Post('signin')
   @HttpCode(HttpStatus.OK)
   async signIn(@Body() dto: SignInDto) {
@@ -58,8 +72,11 @@ export class AuthController {
     return { session, user };
   }
 
-  @ApiSecurity(SESSION_HEADER_KEY)
+  /**
+   * Returns the active session and user profile bound to the `x-session-id` header.
+   */
   @Get('me')
+  @ApiSecurity(SESSION_HEADER_KEY)
   @UseGuards(SessionGuard)
   getCurrentSession(@CurrentSession() auth: ActiveSessionContext) {
     return {
