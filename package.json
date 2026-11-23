@@ -20,7 +20,8 @@
     "test:backend:cov": "npm --workspace=backend run test:cov",
     "test:e2e": "npm --workspace=frontend run test:e2e",
     "docker:up": "docker compose up --build -d",
-    "docker:down": "docker compose down -v"
+    "docker:down": "docker compose down -v",
+    "docs:backend": "npm --workspace=backend run docs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

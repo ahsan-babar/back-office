@@ -26,3 +26,6 @@ playwright/.cache/
 .idea/
 *.log
 npm-debug.log*
+
+# Generated API documentation
+api-docs/
