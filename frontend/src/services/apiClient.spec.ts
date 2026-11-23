@@ -1,7 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SESSION_HEADER_KEY } from '../config/constants';
 import {
+  SESSION_HEADER_KEY,
+  UNAUTHORIZED_EVENT,
+} from '../config/constants';
+import {
+  ApiError,
   apiClient,
+  getStoredSessionId,
   setStoredSessionId,
 } from './apiClient';
 
@@ -21,8 +26,46 @@ describe('apiClient', () => {
 
     await apiClient.getUsers(1, 6);
 
-    const [, init] = fetchSpy.mock.calls[0];
+    const firstCall = fetchSpy.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const [, init] = firstCall!;
     const headers = init?.headers as Headers;
     expect(headers.get(SESSION_HEADER_KEY)).toBe('sess-123');
+  });
+
+  it('clears stored session and dispatches unauthorized event on 401 responses', async () => {
+    setStoredSessionId('expired-session');
+    const listener = vi.fn();
+    window.addEventListener(UNAUTHORIZED_EVENT, listener);
+
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ message: 'Session is inactive or expired' }), {
+        status: 401,
+      }),
+    );
+
+    await expect(apiClient.getUsers()).rejects.toBeInstanceOf(ApiError);
+    expect(getStoredSessionId()).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener);
+  });
+
+  it('formats NestJS validation error arrays into a readable ApiError message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ message: ['email must be an email', 'password is too short'] }),
+        { status: 400 },
+      ),
+    );
+
+    await expect(
+      apiClient.signUp({
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        email: 'bad',
+        password: '123',
+      }),
+    ).rejects.toThrow('email must be an email, password is too short');
   });
 });
