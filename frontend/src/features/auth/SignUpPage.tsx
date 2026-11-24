@@ -11,9 +11,9 @@ import {
 } from '@mui/material';
 import { FormEvent, useState } from 'react';
 import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
+import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 import { APP_ROUTES, PASSWORD_MIN_LENGTH, UI_MESSAGES } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
-import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 
 export function SignUpPage() {
   const { user, signUp } = useAuth();
@@ -23,6 +23,7 @@ export function SignUpPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -33,6 +34,12 @@ export function SignUpPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await signUp({ firstName, lastName, email, password });
@@ -47,10 +54,15 @@ export function SignUpPage() {
   return (
     <Container maxWidth="xs" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-          Sign Up
-        </Typography>
-        <ThemeToggleButton color="default" />
+        <Stack
+          direction="row"
+          sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+        >
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
+            Sign Up
+          </Typography>
+          <ThemeToggleButton color="default" />
+        </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Create an operator account to manage back-office users.
         </Typography>
@@ -91,6 +103,14 @@ export function SignUpPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               helperText={`Minimum ${PASSWORD_MIN_LENGTH} characters`}
+              required
+              fullWidth
+            />
+            <TextField
+              label="Confirm Password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
               fullWidth
             />
