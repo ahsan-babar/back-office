@@ -13,6 +13,7 @@ import { FormEvent, useState } from 'react';
 import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
 import { APP_ROUTES, PASSWORD_MIN_LENGTH, UI_MESSAGES } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
+import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 
 export function SignUpPage() {
   const { user, signUp } = useAuth();
@@ -49,6 +50,7 @@ export function SignUpPage() {
         <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
           Sign Up
         </Typography>
+        <ThemeToggleButton color="default" />
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           Create an operator account to manage back-office users.
         </Typography>

@@ -2,6 +2,9 @@
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
+/** localStorage key used to persist the user's selected color theme ('light' | 'dark'). */
+export const THEME_STORAGE_KEY = 'backoffice_theme_mode';
+  
 /** HTTP header and localStorage keys used for session authentication. */
 export const SESSION_HEADER_KEY = 'x-session-id';
 export const SESSION_STORAGE_KEY = 'backoffice_session_id';

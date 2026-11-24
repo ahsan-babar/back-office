@@ -1,5 +1,6 @@
 import { createTheme, CssBaseline, ThemeProvider } from '@mui/material';
 import { AuthProvider } from './context/AuthContext';
+import { AppThemeProvider } from './context/ThemeContext';
 import { AppRoutes } from './routes/AppRoutes';
 
 const theme = createTheme({
@@ -13,9 +14,11 @@ export function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
+      <AppThemeProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </AppThemeProvider>
     </ThemeProvider>
   );
 }
