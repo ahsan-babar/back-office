@@ -1,6 +1,6 @@
 # Back-Office User & Session Management System
 
-A full-stack back-office application for managing users and active authentication sessions, built with **Node.js 26 LTS**, **TypeScript 5+**, **NestJS 11**, **MongoDB** (AWS DocumentDB wire-compatible), **React**, and **Docker Compose**.
+A full-stack back-office application for managing users and active authentication sessions, built with **Node.js 26 LTS**, **TypeScript 5+**, **NestJS 11**, **MongoDB** (AWS DocumentDB wire-compatible), **React**, **Material UI (MUI)**, and **Docker Compose**.
 
 ---
 
@@ -11,6 +11,7 @@ A full-stack back-office application for managing users and active authenticatio
   - **Users:** Immutable `createdAt`, automatic `updatedAt` tracking, atomic `loginsCounter` increments, and strict prevention of `firstName`/`lastName` edits while a user's status is `inactive`.
   - **Sessions:** Inactive users cannot create sessions; sessions track `createdAt` and `terminatedAt`, and deactivating or deleting a user immediately revokes all active sessions for that user.
 - **Transport-Decoupled HTTP Layer:** Domain services (`IUsersService`, `ISessionsService`) are completely decoupled from Express. While `@nestjs/platform-express` is used for clean `supertest` integration ergonomics, swapping to `@nestjs/platform-fastify` requires only a bootstrap adapter change if raw JSON throughput ever becomes a bottleneck.
+- **Frontend SPA Architecture:** Built with **React**, **TypeScript**, **React Router**, and **Material UI**, featuring centralized 
 
 ---
 
@@ -29,6 +30,7 @@ cp .env.example .env
 | `MONGODB_URI` | Backend | `mongodb://localhost:27017/back-office` | MongoDB / AWS DocumentDB connection string |
 | `CORS_ORIGIN` | Backend | `http://localhost:5173` | Allowed frontend origin for browser CORS requests |
 | `VITE_API_BASE_URL` | Frontend | `http://localhost:3000/api` | Base URL used by the React SPA to reach the REST API |
+| `FRONTEND_PORT` | Docker Compose | `8080` | Host port mapped to the Nginx container serving the production React SPA |
 
 ---
 
@@ -44,37 +46,87 @@ nvm use
 npm install
 ```
 
-### 2. Development Mode
-Start MongoDB via Docker Compose, then run the backend and frontend dev servers:
+### 2. Development Mode (Backend & Frontend)
+Start MongoDB via Docker Compose, then launch the backend and frontend development servers in separate terminals:
+
 ```bash
+# 1. Start MongoDB
 docker compose up -d mongodb
+
+# 2. Start the NestJS Backend API (watch mode)
 npm run dev:backend
+
+# 3. Start the React + Vite Frontend SPA (HMR enabled)
 npm run dev:frontend
 ```
-- **Backend API:** `http://localhost:3000/api`
-- **Frontend App:** `http://localhost:5173`
+- **Frontend App (Vite Dev Server):** `http://localhost:5173`
+- **Backend REST API:** `http://localhost:3000/api`
 
 ### 3. Production Mode (Full Stack via Docker Compose)
-Build and launch MongoDB (`ums-mongodb`), the NestJS API (`api-users`), and the Nginx-served React SPA (`app-web`):
+The `docker-compose.yml` orchestrates three isolated services on a shared bridge network with health checks:
+1. **`mongodb` (`ums-mongodb`):** MongoDB database with persistent named volume storage.
+2. **`backend` (`api-users`):** Multi-stage production NestJS API build on port `3000`, waiting for `mongodb` health before starting.
+3. **`frontend` (`app-web`):** Multi-stage Vite production bundle served via **Nginx** on port `8080` with SPA fallback routing (`try_files $uri /index.html`).
+
+Build and launch the entire stack:
 ```bash
 npm run docker:up
+# or directly: docker compose up --build -d
 ```
-- **Production Web UI:** `http://localhost:8080`
+- **Production Web UI (Nginx):** `http://localhost:8080`
 - **Production REST API:** `http://localhost:3000/api`
 
-To stop and remove containers/volumes:
+To inspect logs or tear down containers and volumes:
 ```bash
+docker compose logs -f
 npm run docker:down
+# or directly: docker compose down -v
 ```
 
 ---
 
 ## Building, Linting & Testing
 
+### Workspace Commands (Run from Root)
+
 | Command | Description |
 | :--- | :--- |
-| `npm run lint` | Runs ESLint across all workspaces |
-| `npm run build` | Compiles production builds for backend and frontend |
-| `npm run test:backend` | Executes backend unit and HTTP integration tests (using in-memory MongoDB) |
+| `npm run lint` | Runs ESLint across both `backend` and `frontend` workspaces |
+| `npm run build` | Compiles production TypeScript & Vite bundles for `backend` and `frontend` |
+| `npm run test:backend` | Executes backend unit and HTTP integration tests (using `mongodb-memory-server`) |
 | `npm run test:backend:cov` | Executes backend tests with Node.js native V8 code coverage report |
-| `npm run test:e2e` | Runs Playwright end-to-end tests against the full stack |
+| `npm run test:frontend` | Executes frontend component and flow tests via Vitest & React Testing Library |
+| `npm run test:frontend:cov` | Executes frontend tests with V8 code coverage report (`lines`, `functions`, `branches`, `statements`) |
+| `npm run test:e2e` | Runs Playwright end-to-end tests against the running full stack |
+
+### Running Frontend Tests Directly
+```bash
+# Single run
+npm --workspace=frontend run test
+
+# Watch mode during active UI development
+npm --workspace=frontend exec vitest
+
+# Generate V8 HTML & terminal coverage report (outputs to frontend/coverage/)
+npm --workspace=frontend run test:coverage
+```
+
+---
+
+### Backend (NestJS & MongoDB) Roadmap
+
+- **High-Throughput Fastify Adapter (`@nestjs/platform-fastify`):** Because all domain services and controllers are decoupled from Express-specific primitives, switching NestJS from `@nestjs/platform-express` to `@nestjs/platform-fastify` (along with `fast-json-stringify` schema serialization) can be enabled in `main.ts` to significantly boost request throughput and lower p99 JSON serialization latency under heavy concurrent traffic.
+- **Session Transport & Expiration:** Currently, session IDs are persisted in `localStorage` and sent via the `x-session-id` header for straightforward SPA integration. For higher XSS resistance in production, sessions should be issued as `HttpOnly; Secure; SameSite=Strict` cookies with a configurable TTL and sliding expiration.
+- **Role-Based Access Control (RBAC) & Self-Protection:** Any authenticated active user currently has full administrative privileges on `/users`, including deactivating or deleting their own account. Adding explicit `admin` vs. `operator` roles and preventing self-deletion would improve operational safety.
+- **Search, Filtering & Sorting:** The `GET /api/users` endpoint supports offset pagination (`6` items per page). Adding indexed query filters (`status`, name/email prefix search) and column sorting would improve usability at larger scale.
+- **Rate Limiting & Audit Logging:** Adding request throttling on `/api/auth/signin` and `/api/auth/signup` plus an immutable audit trail for user status changes and session revocations would harden production security.
+- **Immutable Audit Trail:** Persist an append-only audit log capturing who created, modified, deactivated, or deleted user accounts and active sessions.
+
+
+### Frontend (React) Roadmap
+- **Server-State Management (TanStack Query):** Replace manual `useEffect` data-fetching hooks with **TanStack Query** to enable automatic caching, background revalidation, request deduplication, and optimistic UI updates for user mutations.
+- **Shared Schema Validation (`React Hook Form` + `Zod`):** Introduce **React Hook Form** with **Zod** validation schemas shared between the NestJS backend and React frontend to eliminate duplicate validation logic and minimize form re-renders.
+- **Route-Level Code Splitting:** Lazy-load feature routes (`UsersDashboardPage`, `SignInPage`, `SignUpPage`) via `React.lazy()` and `Suspense` to reduce initial bundle size and improve Time-to-Interactive (TTI).
+- **URL-Synchronized Pagination & Filtering:** Persist pagination (`?page=`), status filters, and debounced search inputs in URL query parameters (`useSearchParams`) so views remain stateful across page reloads and shareable links.
+- **Error Boundaries & Toast Notifications:** Add React Error Boundaries around feature modules and a global MUI `Snackbar` notification queue for consistent, non-blocking API error handling.
+- **Automated Accessibility (`axe-core`) & Visual Regression:** Integrate `@axe-core/playwright` into the E2E pipeline to enforce WCAG 2.1 AA keyboard/focus standards across dialogs and both light/dark MUI themes.
