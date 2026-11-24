@@ -23,7 +23,9 @@
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down -v",
-    "docs:backend": "npm --workspace=backend run docs"
+    "docs:backend": "npm --workspace=backend run docs",
+    "docs:frontend": "npm --workspace=frontend run docs",
+    "docs": "npm run docs:backend && npm run docs:frontend"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
