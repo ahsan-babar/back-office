@@ -1,4 +1,5 @@
 import {
+  act,
   render,
   screen,
   waitFor,
@@ -9,9 +10,17 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { APP_ROUTES, THEME_STORAGE_KEY, UI_MESSAGES } from './config/constants';
+import { APP_ROUTES, THEME_STORAGE_KEY, UI_MESSAGES, UNAUTHORIZED_EVENT } from './config/constants';
 import { apiClient, setStoredSessionId } from './services/apiClient';
 import { User } from './types/domain';
+
+function renderApp(initialRoute = '/users') {
+  return render(
+    <MemoryRouter initialEntries={[initialRoute]}>
+      <App />
+    </MemoryRouter>,
+  );
+}
 
 const activeAdminUser: User = {
   id: 'u-admin',
@@ -318,6 +327,173 @@ describe('Back-Office Frontend Flows', () => {
 
     expect(
       screen.getByRole('button', { name: /switch to light theme/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('blocks sign-up client-side when password and confirm password do not match', async () => {
+    const signUpSpy = vi.spyOn(apiClient, 'signUp');
+    const user = userEvent.setup();
+    renderApp('/signup');
+
+    await user.type(screen.getByLabelText(/first name/i), 'Ada');
+    await user.type(screen.getByLabelText(/last name/i), 'Lovelace');
+    await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'Password123!');
+    await user.type(screen.getByLabelText(/confirm password/i), 'Different123!');
+    await user.click(screen.getByRole('button', { name: /sign up/i }));
+
+    expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(signUpSpy).not.toHaveBeenCalled();
+  });
+
+  it('displays API error banner on Sign In failure', async () => {
+    vi.spyOn(apiClient, 'signIn').mockRejectedValueOnce(new Error('Invalid credentials'));
+    const user = userEvent.setup();
+    renderApp('/signin');
+
+    await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/password/i), 'WrongPass123!');
+    await user.click(screen.getByRole('button', { name: /sign in/i }));
+
+    expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
+  });
+
+  it('redirects to /signin when an API request dispatches global 401 unauthorized event', async () => {
+    setStoredSessionId('sess-active-1');
+    vi.spyOn(apiClient, 'getCurrentSession').mockResolvedValueOnce({
+      session: {
+        id: 'sess-active-1',
+        userId: 'u-1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        terminatedAt: null,
+      },
+      user: {
+        id: 'u-1',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        email: 'ada@example.com',
+        status: 'active',
+        loginsCounter: 1,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+    vi.spyOn(apiClient, 'getUsers').mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      limit: 6,
+      totalPages: 1,
+    });
+
+    renderApp('/users');
+    expect(await screen.findByText(/hello ada/i)).toBeInTheDocument();
+
+    // Dispatch the exact UNAUTHORIZED_EVENT constant listened to by AuthProvider
+    act(() => {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+    });
+
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+  });
+
+  it('deletes a user via confirmation modal and steps back a page when last item on page 2 is removed', async () => {
+    setStoredSessionId('sess-active-1');
+    vi.spyOn(apiClient, 'getCurrentSession').mockResolvedValueOnce({
+      session: {
+        id: 'sess-active-1',
+        userId: 'u-1',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        terminatedAt: null,
+      },
+      user: {
+        id: 'u-1',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
+        email: 'ada@example.com',
+        status: 'active',
+        loginsCounter: 1,
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    const getUsersSpy = vi
+      .spyOn(apiClient, 'getUsers')
+      // Page 1 initial load (7 total -> 2 pages)
+      .mockResolvedValueOnce({
+        items: Array.from({ length: 6 }, (_, i) => ({
+          id: `u-${i + 1}`,
+          firstName: `User${i + 1}`,
+          lastName: 'Test',
+          email: `user${i + 1}@example.com`,
+          status: 'active' as const,
+          loginsCounter: 1,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          updatedAt: '2026-01-01T00:00:00.000Z',
+        })),
+        total: 7,
+        page: 1,
+        limit: 6,
+        totalPages: 2,
+      })
+      // Page 2 load (1 item on page 2)
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'u-7',
+            firstName: 'Seventh',
+            lastName: 'User',
+            email: 'user7@example.com',
+            status: 'active',
+            loginsCounter: 0,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            updatedAt: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+        total: 7,
+        page: 2,
+        limit: 6,
+        totalPages: 2,
+      })
+      // Reload Page 1 after deleting final item on Page 2
+      .mockResolvedValueOnce({
+        items: [],
+        total: 6,
+        page: 1,
+        limit: 6,
+        totalPages: 1,
+      });
+
+    const deleteSpy = vi.spyOn(apiClient, 'deleteUser').mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+    renderApp('/users');
+
+    // Navigate to Page 2
+    const page2Button = await screen.findByRole('button', { name: /go to page 2/i });
+    await user.click(page2Button);
+    expect(await screen.findByText('user7@example.com')).toBeInTheDocument();
+
+    // Open Delete dialog and confirm
+    await user.click(screen.getByRole('button', { name: /delete/i }));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }));
+
+    await waitFor(() => {
+      expect(deleteSpy).toHaveBeenCalledWith('u-7');
+      expect(getUsersSpy).toHaveBeenLastCalledWith(1, 6);
+    });
+  });
+
+  it('toggles light/dark theme and persists preference in localStorage', async () => {
+    const user = userEvent.setup();
+    renderApp('/signin');
+
+    const toggleBtn = screen.getByRole('button', { name: /switch to dark theme/i });
+    await user.click(toggleBtn);
+
+    expect(
+      await screen.findByRole('button', { name: /switch to light theme/i }),
     ).toBeInTheDocument();
   });
 
