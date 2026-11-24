@@ -12,18 +12,15 @@ import {
 import { FormEvent, useState } from 'react';
 import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
 import { ThemeToggleButton } from '../../components/ThemeToggleButton';
-import { APP_ROUTES, PASSWORD_MIN_LENGTH, UI_MESSAGES } from '../../config/constants';
+import { APP_ROUTES, UI_MESSAGES } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
 
-export function SignUpPage() {
-  const { user, signUp } = useAuth();
+export function SignInPage() {
+  const { user, signIn } = useAuth();
   const navigate = useNavigate();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -34,15 +31,9 @@ export function SignUpPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
     setSubmitting(true);
     try {
-      await signUp({ firstName, lastName, email, password });
+      await signIn({ email, password });
       navigate(APP_ROUTES.USERS);
     } catch (err) {
       setError(err instanceof Error ? err.message : UI_MESSAGES.GENERIC_ERROR);
@@ -52,19 +43,19 @@ export function SignUpPage() {
   };
 
   return (
-    <Container maxWidth="xs" sx={{ mt: 8 }}>
+    <Container maxWidth="xs" sx={{ mt: 10 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Stack
           direction="row"
           sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
         >
           <Typography variant="h5" component="h1" sx={{ fontWeight: 600 }}>
-            Sign Up
+            Sign In
           </Typography>
           <ThemeToggleButton color="default" />
         </Stack>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Create an operator account to manage back-office users.
+          Access the Back-Office User & Session Management portal.
         </Typography>
 
         {error && (
@@ -76,43 +67,22 @@ export function SignUpPage() {
         <Box component="form" onSubmit={handleSubmit} noValidate>
           <Stack spacing={2.5}>
             <TextField
-              label="First Name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Last Name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
               label="Email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               fullWidth
+              autoComplete="email"
             />
             <TextField
               label="Password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              helperText={`Minimum ${PASSWORD_MIN_LENGTH} characters`}
               required
               fullWidth
-            />
-            <TextField
-              label="Confirm Password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              fullWidth
+              autoComplete="current-password"
             />
             <Button
               type="submit"
@@ -121,15 +91,15 @@ export function SignUpPage() {
               disabled={submitting}
               fullWidth
             >
-              {submitting ? 'Creating account...' : 'Sign Up'}
+              {submitting ? 'Signing in...' : 'Sign In'}
             </Button>
           </Stack>
         </Box>
 
         <Typography variant="body2" align="center" sx={{ mt: 3 }}>
-          Already have an account?{' '}
-          <Link component={RouterLink} to={APP_ROUTES.SIGN_IN}>
-            Sign in
+          Don&apos;t have an account?{' '}
+          <Link component={RouterLink} to={APP_ROUTES.SIGN_UP}>
+            Create an account
           </Link>
         </Typography>
       </Paper>
