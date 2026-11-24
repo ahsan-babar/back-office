@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.husky/**',
       '**/api-docs/**',
+      '**/ui-docs/**',
     ],
   },
   eslint.configs.recommended,
