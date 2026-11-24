@@ -18,7 +18,9 @@
     "build": "npm --workspace=backend run build && npm --workspace=frontend run build",
     "test:backend": "npm --workspace=backend run test",
     "test:backend:cov": "npm --workspace=backend run test:cov",
-    "test:e2e": "npm --workspace=frontend run test:e2e",
+    "test:frontend": "npm --workspace=frontend run test",
+    "test:frontend:cov": "npm --workspace=backend run test:cov",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down -v",
     "docs:backend": "npm --workspace=backend run docs"
