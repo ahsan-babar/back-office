@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { UNAUTHORIZED_EVENT } from '../config/constants';
@@ -19,6 +20,7 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  wasLoggedOut: () => boolean;
   signIn: (payload: SignInPayload) => Promise<void>;
   signUp: (payload: SignUpPayload) => Promise<void>;
   signOut: () => Promise<void>;
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(getStoredSessionId()));
+  const loggedOutRef = useRef<boolean>(false);
 
   useEffect(() => {
     const existingSessionId = getStoredSessionId();
@@ -60,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const handleUnauthorized = () => {
+      loggedOutRef.current = true;
       setUser(null);
       setSession(null);
     };
@@ -67,8 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized);
   }, []);
 
+  const wasLoggedOut = useCallback(() => loggedOutRef.current, []);
+
   const signIn = useCallback(async (payload: SignInPayload) => {
     const res = await apiClient.signIn(payload);
+    loggedOutRef.current = false;
     setStoredSessionId(res.session.id);
     setSession(res.session);
     setUser(res.user);
@@ -76,27 +83,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (payload: SignUpPayload) => {
     const res = await apiClient.signUp(payload);
+    loggedOutRef.current = false;
     setStoredSessionId(res.session.id);
     setSession(res.session);
     setUser(res.user);
   }, []);
 
   const signOut = useCallback(async () => {
-    const currentId = session?.id || getStoredSessionId();
+    const activeSessionId = session?.id ?? getStoredSessionId();
+    loggedOutRef.current = true;
     try {
-      if (currentId) {
-        await apiClient.terminateSession(currentId);
+      if (activeSessionId) {
+        await apiClient.terminateSession(activeSessionId);
       }
     } finally {
       setStoredSessionId(null);
       setSession(null);
       setUser(null);
     }
-  }, [session]);
+  }, [session?.id]);
 
   const value = useMemo(
-    () => ({ user, session, isLoading, signIn, signUp, signOut }),
-    [user, session, isLoading, signIn, signUp, signOut],
+    () => ({ user, session, isLoading, wasLoggedOut, signIn, signUp, signOut }),
+    [user, session, isLoading, wasLoggedOut, signIn, signUp, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

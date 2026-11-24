@@ -1,10 +1,8 @@
 import { Logout as LogoutIcon } from '@mui/icons-material';
 import { AppBar, Box, Button, Toolbar, Typography } from '@mui/material';
-import { ReactNode,  } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { ThemeToggleButton } from '../components/ThemeToggleButton';
 import { useAuth } from '../hooks/useAuth';
-import { ThemeToggleButton } from '../components/ThemeToggleButton'
-import { APP_ROUTES } from '../config/constants'
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -12,13 +10,6 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogOut = async () => {
-    await signOut();
-    navigate(APP_ROUTES.SIGN_IN);
-  };
-
 
   return (
     <Box sx={{ minHeight: '100vh' }}>
@@ -36,7 +27,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <Button
             color="inherit"
             startIcon={<LogoutIcon />}
-            onClick={() => void handleLogOut()}
+            onClick={() => void signOut()}
             sx={{ ml: 1 }}
           >
             Log Out

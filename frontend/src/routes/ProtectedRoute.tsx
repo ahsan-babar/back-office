@@ -5,7 +5,7 @@ import { APP_ROUTES } from '../config/constants';
 import { useAuth } from '../hooks/useAuth';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, wasLoggedOut } = useAuth();
 
   if (isLoading) {
     return (
@@ -23,7 +23,12 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to={APP_ROUTES.SIGN_UP} replace />;
+    return (
+      <Navigate
+        to={wasLoggedOut() ? APP_ROUTES.SIGN_IN : APP_ROUTES.SIGN_UP}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;
