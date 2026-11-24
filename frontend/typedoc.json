@@ -1,0 +1,19 @@
+{
+    "$schema": "https://typedoc.org",
+    "entryPoints": ["src"],
+    "entryPointStrategy": "expand",
+    "exclude": [
+      "src/**/*.spec.ts",
+      "src/**/*.spec.tsx",
+      "src/**/*.test.ts",
+      "src/**/*.test.tsx",
+      "src/test/**",
+      "src/main.tsx",
+      "src/vite-env.d.ts"
+    ],
+    "out": "ui-docs",
+    "name": "Back-Office Frontend Documentation",
+    "readme": "README.md",
+    "tsconfig": "tsconfig.json"
+  }
+  
