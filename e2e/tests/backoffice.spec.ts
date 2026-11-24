@@ -122,4 +122,76 @@ test.describe('Back-Office User & Session Management E2E', () => {
     await expect(page).toHaveURL(/\/users$/);
     await expect(page.getByText(`Hello ${operator.firstName}`)).toBeVisible();
   });
+
+  test('validates password mismatch and rejects duplicate email registration', async ({
+    page,
+  }) => {
+    const dupEmail = `dup.${Date.now()}@example.com`;
+    await page.goto(`${APP_URL}/signup`);
+
+    // 1. Client-side password mismatch
+    await page.getByLabel(/first name/i).fill('Linus');
+    await page.getByLabel(/last name/i).fill('Torvalds');
+    await page.getByLabel(/email/i).fill(dupEmail);
+    await page.getByLabel(/^password/i).fill('Password123!');
+    await page.getByLabel(/confirm password/i).fill('Mismatch123!');
+    await page.getByRole('button', { name: 'Sign Up' }).click();
+    await expect(page.getByText(/passwords do not match/i)).toBeVisible();
+
+    // 2. Valid registration succeeds
+    await page.getByLabel(/confirm password/i).fill('Password123!');
+    await page.getByRole('button', { name: 'Sign Up' }).click();
+    await expect(page).toHaveURL(/\/users$/);
+
+    // 3. Log out and attempt to sign up again with the exact same email -> 409 error
+    await page.getByRole('button', { name: 'Log Out' }).click();
+    await expect(page).toHaveURL(/\/signin$/);
+
+    await page.getByRole('link', { name: /create an account/i }).click();
+    await expect(page).toHaveURL(/\/signup$/);
+
+    await page.getByLabel(/first name/i).fill('Linus');
+    await page.getByLabel(/last name/i).fill('Clone');
+    await page.getByLabel(/email/i).fill(dupEmail);
+    await page.getByLabel(/^password/i).fill('Password123!');
+    await page.getByLabel(/confirm password/i).fill('Password123!');
+    await page.getByRole('button', { name: 'Sign Up' }).click();
+
+    await expect(page.getByRole('alert')).toBeVisible();
+    await expect(page).toHaveURL(/\/signup$/);
+  });
+
+  test('paginates users at 6 items per page', async ({ page }) => {
+    const batchId = Date.now();
+    await page.goto(`${APP_URL}/signup`);
+
+    await page.getByLabel(/first name/i).fill('PageAdmin');
+    await page.getByLabel(/last name/i).fill('Operator');
+    await page.getByLabel(/email/i).fill(`pageadmin.${batchId}@example.com`);
+    await page.getByLabel(/^password/i).fill('Password123!');
+    await page.getByLabel(/confirm password/i).fill('Password123!');
+    await page.getByRole('button', { name: 'Sign Up' }).click();
+    await expect(page).toHaveURL(/\/users$/);
+
+    // Create 6 additional users (total >= 7) to trigger page 2
+    for (let i = 1; i <= 6; i++) {
+      await page.getByRole('button', { name: 'New User' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.getByLabel(/first name/i).fill(`Batch${i}`);
+      await dialog.getByLabel(/last name/i).fill('Member');
+      await dialog.getByLabel(/email/i).fill(`batch.${batchId}.${i}@example.com`);
+      await dialog.getByLabel(/^password/i).fill('Password123!');
+      await dialog.getByRole('button', { name: 'Create' }).click();
+      await expect(dialog).toBeHidden();
+    }
+
+    const page2Btn = page.getByRole('button', { name: /go to page 2/i });
+    await expect(page2Btn).toBeVisible();
+    await page2Btn.click();
+    await expect(page.getByRole('button', { name: /page 2/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
 });
