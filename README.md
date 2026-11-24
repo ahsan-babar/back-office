@@ -23,15 +23,23 @@ Copy `.env.example` to `.env` before running locally:
 cp .env.example .env
 ```
 
+All variables in `docker-compose.yml` use `${VAR:-default}` interpolation so `.env` overrides are applied automatically while maintaining safe container fallbacks.
+
+
 | Variable | Scope | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `NODE_ENV` | Backend | `development` | Runtime environment (`development`, `production`, `test`) |
-| `PORT` | Backend | `3000` | Port exposed by the NestJS REST API |
-| `MONGODB_URI` | Backend | `mongodb://localhost:27017/back-office` | MongoDB / AWS DocumentDB connection string |
-| `CORS_ORIGIN` | Backend | `http://localhost:5173` | Allowed frontend origin for browser CORS requests |
-| `VITE_API_BASE_URL` | Frontend | `http://localhost:3000/api` | Base URL used by the React SPA to reach the REST API |
-| `FRONTEND_PORT` | Docker Compose | `8080` | Host port mapped to the Nginx container serving the production React SPA |
-| `E2E_BASE_URL` | Playwright E2E | `http://localhost:8080` | Target frontend URL used by Playwright (`http://localhost:8080` for Docker or `http://localhost:5173` for Vite dev) |
+| `NODE_ENV` | Backend (Local) | `development` | Runtime environment (`development`, `production`, `test`) |
+| `PORT` | Backend / Docker | `3000` | Port exposed by the NestJS REST API |
+| `MONGODB_URI` | Backend (Local) | `mongodb://localhost:27017/back-office` | Local MongoDB / AWS DocumentDB connection string |
+| `CORS_ORIGIN` | Backend (Local) | `http://localhost:5173` | Allowed frontend origin for local browser CORS requests |
+| `VITE_API_BASE_URL` | Frontend / Docker | `http://localhost:3000/api` | Base URL used by the React SPA to communicate with the REST API |
+| `MONGODB_PORT` | Docker Compose | `27017` | Host port mapped to the `ums-mongodb` container |
+| `MONGO_INITDB_DATABASE` | Docker Compose | `back-office` | Initial database name created by the MongoDB container |
+| `DOCKER_NODE_ENV` | Docker Compose | `production` | Runtime environment inside the `api-users` container |
+| `DOCKER_MONGODB_URI` | Docker Compose | `mongodb://mongodb:27017/back-office` | Internal Docker network connection string for `api-users` |
+| `DOCKER_CORS_ORIGIN` | Docker Compose | `http://localhost:8080` | Allowed frontend origin for the Nginx-served container |
+| `FRONTEND_PORT` | Docker Compose | `8080` | Host port mapped to the Nginx `app-web` container |
+| `E2E_BASE_URL` | Playwright E2E | `http://localhost:8080` | Target frontend URL used by Playwright (`8080` for Docker, `5173` for Vite dev) |
 
 
 ---
