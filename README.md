@@ -31,6 +31,8 @@ cp .env.example .env
 | `CORS_ORIGIN` | Backend | `http://localhost:5173` | Allowed frontend origin for browser CORS requests |
 | `VITE_API_BASE_URL` | Frontend | `http://localhost:3000/api` | Base URL used by the React SPA to reach the REST API |
 | `FRONTEND_PORT` | Docker Compose | `8080` | Host port mapped to the Nginx container serving the production React SPA |
+| `E2E_BASE_URL` | Playwright E2E | `http://localhost:8080` | Target frontend URL used by Playwright (`http://localhost:8080` for Docker or `http://localhost:5173` for Vite dev) |
+
 
 ---
 
@@ -98,6 +100,7 @@ npm run docker:down
 | `npm run test:frontend` | Executes frontend component and flow tests via Vitest & React Testing Library |
 | `npm run test:frontend:cov` | Executes frontend tests with V8 code coverage report (`lines`, `functions`, `branches`, `statements`) |
 | `npm run test:e2e` | Runs Playwright end-to-end tests against the running full stack |
+| `npm run test:e2e-ui` | Runs Playwright end-to-end tests against the running full stack with ui |
 
 ### Running Frontend Tests Directly
 ```bash
@@ -111,7 +114,46 @@ npm --workspace=frontend exec vitest
 npm --workspace=frontend run test:coverage
 ```
 
+### Running End-to-End (E2E) Tests with Playwright
+
+Playwright executes end-to-end browser flows against the live full stack (`MongoDB` + `NestJS API` + `React SPA`).
+
+1. **Ensure the full stack is running** (either via Docker Compose on port `8080` or local dev servers on port `5173`):
+   ```bash
+   # Option A: Production Docker Compose stack (default E2E_BASE_URL=http://localhost:8080)
+   npm run docker:up
+
+   # Option B: Local development servers (set E2E_BASE_URL=http://localhost:5173)
+   docker compose up -d mongodb
+   npm run dev:backend
+   npm run dev:frontend
+   ```
+
+2. **Install Playwright browser binaries** (first time only):
+   ```bash
+   npx playwright install chromium
+   ```
+
+3. **Run the Playwright test suite:**
+   ```bash
+   # Headless execution against Docker Compose (http://localhost:8080)
+   npm run test:e2e
+
+   # Headless execution against local Vite dev server (http://localhost:5173)
+   E2E_BASE_URL=http://localhost:5173 npm run test:e2e
+
+   # Interactive visual timeline UI (recommended for step-by-step debugging)
+   npm run test:e2e-ui
+
+   # Headed browser execution with slowed actions
+   npx playwright test --headed --slow-mo=250
+
+   # Open the HTML trace & video report after a run
+   npx playwright show-report
+   ```
+
 ---
+
 
 ### Backend (NestJS & MongoDB) Roadmap
 
