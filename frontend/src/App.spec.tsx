@@ -1,10 +1,15 @@
-import { within, waitForElementToBeRemoved } from '@testing-library/react'
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  waitForElementToBeRemoved,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
-import { APP_ROUTES, UI_MESSAGES } from './config/constants';
+import { APP_ROUTES, THEME_STORAGE_KEY, UI_MESSAGES } from './config/constants';
 import { apiClient, setStoredSessionId } from './services/apiClient';
 import { User } from './types/domain';
 
@@ -30,19 +35,77 @@ const inactiveUser: User = {
   updatedAt: '2026-01-09T10:00:00.000Z',
 };
 
-describe('Back-Office Frontend Flows (TDD Spec)', () => {
+describe('Back-Office Frontend Flows', () => {
   afterEach(() => {
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
-  it('redirects unauthenticated visitors on /users to /signin', async () => {
+  it('redirects unauthenticated visitors on /users to /signup', async () => {
     render(
       <MemoryRouter initialEntries={[APP_ROUTES.USERS]}>
         <App />
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /sign up/i })).toBeInTheDocument();
+  });
+
+  it('blocks sign up when password and confirm password do not match', async () => {
+    const user = userEvent.setup();
+    const signUpSpy = vi.spyOn(apiClient, 'signUp');
+
+    render(
+      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_UP]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/first name/i), 'Ada');
+    await user.type(screen.getByLabelText(/last name/i), 'Lovelace');
+    await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'StrongPass123');
+    await user.type(screen.getByLabelText(/confirm password/i), 'DifferentPass456');
+    await user.click(screen.getByRole('button', { name: /sign up/i }));
+
+    expect(await screen.findByText(/passwords do not match/i)).toBeInTheDocument();
+    expect(signUpSpy).not.toHaveBeenCalled();
+  });
+
+  it('allows a new user to sign up when passwords match and greets them on /users', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(apiClient, 'signUp').mockResolvedValue({
+      session: {
+        id: 'sess-signup-1',
+        userId: activeAdminUser.id,
+        createdAt: '2026-01-11T10:00:00.000Z',
+        terminatedAt: null,
+      },
+      user: activeAdminUser,
+    });
+    vi.spyOn(apiClient, 'getUsers').mockResolvedValue({
+      items: [activeAdminUser],
+      total: 1,
+      page: 1,
+      limit: 6,
+      totalPages: 1,
+    });
+
+    render(
+      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_UP]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.type(screen.getByLabelText(/first name/i), 'Ada');
+    await user.type(screen.getByLabelText(/last name/i), 'Lovelace');
+    await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
+    await user.type(screen.getByLabelText(/^password/i), 'StrongPass123');
+    await user.type(screen.getByLabelText(/confirm password/i), 'StrongPass123');
+    await user.click(screen.getByRole('button', { name: /sign up/i }));
+
+    expect(await screen.findByText('Hello Ada')).toBeInTheDocument();
+    expect(screen.getByText('ada@example.com')).toBeInTheDocument();
   });
 
   it('allows a user to sign in, persists session, and renders paginated users table', async () => {
@@ -71,10 +134,11 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
     );
 
     await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'StrongPass123');
+    await user.type(screen.getByLabelText(/^password/i), 'StrongPass123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(await screen.findByText('ada@example.com')).toBeInTheDocument();
+    expect(await screen.findByText('Hello Ada')).toBeInTheDocument();
+    expect(screen.getByText('ada@example.com')).toBeInTheDocument();
     expect(screen.getByText('alan@example.com')).toBeInTheDocument();
     expect(apiClient.getUsers).toHaveBeenCalledWith(1, 6);
   });
@@ -117,82 +181,6 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
     expect(screen.getByText(UI_MESSAGES.INACTIVE_NAME_LOCK_HINT)).toBeInTheDocument();
   });
 
-  it('terminates session on sign out and returns to /signin', async () => {
-    const user = userEvent.setup();
-    setStoredSessionId('sess-active-1');
-
-    vi.spyOn(apiClient, 'getCurrentSession').mockResolvedValue({
-      session: {
-        id: 'sess-active-1',
-        userId: activeAdminUser.id,
-        createdAt: '2026-01-11T10:00:00.000Z',
-        terminatedAt: null,
-      },
-      user: activeAdminUser,
-    });
-    vi.spyOn(apiClient, 'getUsers').mockResolvedValue({
-      items: [activeAdminUser],
-      total: 1,
-      page: 1,
-      limit: 6,
-      totalPages: 1,
-    });
-    const terminateSpy = vi.spyOn(apiClient, 'terminateSession').mockResolvedValue({
-      id: 'sess-active-1',
-      userId: activeAdminUser.id,
-      createdAt: '2026-01-11T10:00:00.000Z',
-      terminatedAt: '2026-01-11T11:00:00.000Z',
-    });
-
-    render(
-      <MemoryRouter initialEntries={[APP_ROUTES.USERS]}>
-        <App />
-      </MemoryRouter>,
-    );
-
-    const signOutBtn = await screen.findByRole('button', { name: /sign out/i });
-    await user.click(signOutBtn);
-
-    await waitFor(() => {
-      expect(terminateSpy).toHaveBeenCalledWith('sess-active-1');
-    });
-    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
-  });
-
-  it('allows a new user to sign up and navigates to /users', async () => {
-    const user = userEvent.setup();
-    vi.spyOn(apiClient, 'signUp').mockResolvedValue({
-      session: {
-        id: 'sess-signup-1',
-        userId: activeAdminUser.id,
-        createdAt: '2026-01-11T10:00:00.000Z',
-        terminatedAt: null,
-      },
-      user: activeAdminUser,
-    });
-    vi.spyOn(apiClient, 'getUsers').mockResolvedValue({
-      items: [activeAdminUser],
-      total: 1,
-      page: 1,
-      limit: 6,
-      totalPages: 1,
-    });
-
-    render(
-      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_UP]}>
-        <App />
-      </MemoryRouter>,
-    );
-
-    await user.type(screen.getByLabelText(/first name/i), 'Ada');
-    await user.type(screen.getByLabelText(/last name/i), 'Lovelace');
-    await user.type(screen.getByLabelText(/email/i), 'ada@example.com');
-    await user.type(screen.getByLabelText(/password/i), 'StrongPass123');
-    await user.click(screen.getByRole('button', { name: /sign up/i }));
-
-    expect(await screen.findByText('ada@example.com')).toBeInTheDocument();
-  });
-
   it('creates and deletes a user via dialogs and navigates pagination pages', async () => {
     const user = userEvent.setup();
     setStoredSessionId('sess-active-1');
@@ -225,22 +213,10 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
     // Create user modal flow
     await user.click(await screen.findByRole('button', { name: /new user/i }));
     const createDialog = await screen.findByRole('dialog');
-    await user.type(
-      within(createDialog).getByLabelText(/first name/i),
-      'Grace',
-    );
-    await user.type(
-      within(createDialog).getByLabelText(/last name/i),
-      'Hopper',
-    );
-    await user.type(
-      within(createDialog).getByLabelText(/email/i),
-      'grace@example.com',
-    );
-    await user.type(
-      within(createDialog).getByLabelText(/password/i),
-      'StrongPass123',
-    );
+    await user.type(within(createDialog).getByLabelText(/first name/i), 'Grace');
+    await user.type(within(createDialog).getByLabelText(/last name/i), 'Hopper');
+    await user.type(within(createDialog).getByLabelText(/email/i), 'grace@example.com');
+    await user.type(within(createDialog).getByLabelText(/^password/i), 'StrongPass123');
     await user.click(within(createDialog).getByRole('button', { name: /^create$/i }));
 
     await waitFor(() => {
@@ -253,7 +229,6 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
       });
     });
 
-    // Wait for MUI Dialog exit transition to finish so background elements are accessible
     await waitForElementToBeRemoved(createDialog);
 
     // Pagination click to page 2
@@ -270,17 +245,64 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
     });
   });
 
-  it('toggles light/dark theme and persists selection across app re-opens', async () => {
+  it('terminates session on log out and navigates to /signin', async () => {
     const user = userEvent.setup();
+    setStoredSessionId('sess-active-1');
 
-    const { unmount } = render(
-      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_IN]}>
+    vi.spyOn(apiClient, 'getCurrentSession').mockResolvedValue({
+      session: {
+        id: 'sess-active-1',
+        userId: activeAdminUser.id,
+        createdAt: '2026-01-11T10:00:00.000Z',
+        terminatedAt: null,
+      },
+      user: activeAdminUser,
+    });
+    vi.spyOn(apiClient, 'getUsers').mockResolvedValue({
+      items: [activeAdminUser],
+      total: 1,
+      page: 1,
+      limit: 6,
+      totalPages: 1,
+    });
+    const terminateSpy = vi.spyOn(apiClient, 'terminateSession').mockResolvedValue({
+      id: 'sess-active-1',
+      userId: activeAdminUser.id,
+      createdAt: '2026-01-11T10:00:00.000Z',
+      terminatedAt: '2026-01-11T11:00:00.000Z',
+    });
+
+    render(
+      <MemoryRouter initialEntries={[APP_ROUTES.USERS]}>
         <App />
       </MemoryRouter>,
     );
 
-    await user.click(screen.getByRole('button', { name: /switch to dark theme/i }));
-    expect(localStorage.getItem('backoffice_theme_mode')).toBe('dark');
+    const logOutBtn = await screen.findByRole('button', { name: /log out/i });
+    await user.click(logOutBtn);
+
+    await waitFor(() => {
+      expect(terminateSpy).toHaveBeenCalledWith('sess-active-1');
+    });
+    expect(await screen.findByRole('heading', { name: /sign in/i })).toBeInTheDocument();
+  });
+
+  it('toggles light/dark theme and persists selection across app re-opens', async () => {
+    const user = userEvent.setup();
+    localStorage.removeItem(THEME_STORAGE_KEY);
+
+    const { unmount } = render(
+      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_UP]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const darkToggleBtn = screen.getByRole('button', {
+      name: /switch to dark theme/i,
+    });
+    await user.click(darkToggleBtn);
+
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
     expect(
       screen.getByRole('button', { name: /switch to light theme/i }),
     ).toBeInTheDocument();
@@ -289,7 +311,7 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
     unmount();
 
     render(
-      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_IN]}>
+      <MemoryRouter initialEntries={[APP_ROUTES.SIGN_UP]}>
         <App />
       </MemoryRouter>,
     );
@@ -298,6 +320,5 @@ describe('Back-Office Frontend Flows (TDD Spec)', () => {
       screen.getByRole('button', { name: /switch to light theme/i }),
     ).toBeInTheDocument();
   });
-
 
 });
