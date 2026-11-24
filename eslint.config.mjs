@@ -10,6 +10,7 @@ export default tseslint.config(
       '**/.husky/**',
       '**/api-docs/**',
       '**/ui-docs/**',
+      'playwright-report',
     ],
   },
   eslint.configs.recommended,
