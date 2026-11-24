@@ -21,6 +21,7 @@
     "test:frontend": "npm --workspace=frontend run test",
     "test:frontend:cov": "npm --workspace=backend run test:cov",
     "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "test:e2e-ui": "playwright test --config=e2e/playwright.config.ts --ui",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down -v",
     "docs:backend": "npm --workspace=backend run docs",
