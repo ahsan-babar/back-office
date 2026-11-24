@@ -23,7 +23,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   }
 
   if (!user) {
-    return <Navigate to={APP_ROUTES.SIGN_IN} replace />;
+    return <Navigate to={APP_ROUTES.SIGN_UP} replace />;
   }
 
   return <>{children}</>;
