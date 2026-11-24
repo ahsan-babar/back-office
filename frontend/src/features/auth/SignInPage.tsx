@@ -15,6 +15,14 @@ import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 import { APP_ROUTES, UI_MESSAGES } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
 
+/**
+ * Operator authentication view (`/signin`) allowing active users to sign in
+ * with email and password credentials.
+ *
+ * Redirects already-authenticated users immediately to `/users`, provides a
+ * quick link to `/signup` for new operator registration, and includes the
+ * global theme toggle.
+ */
 export function SignInPage() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
@@ -28,6 +36,10 @@ export function SignInPage() {
     return <Navigate to={APP_ROUTES.USERS} replace />;
   }
 
+  /**
+   * Submits credentials via {@link useAuth} `signIn`, navigates to `/users`
+   * on success, or surfaces authentication/inactive-account errors inline.
+   */
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);

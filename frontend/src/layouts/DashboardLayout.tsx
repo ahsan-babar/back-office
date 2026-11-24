@@ -5,9 +5,15 @@ import { ThemeToggleButton } from '../components/ThemeToggleButton';
 import { useAuth } from '../hooks/useAuth';
 
 interface DashboardLayoutProps {
+  /** Main page content rendered below the top administration application bar. */
   children: ReactNode;
 }
 
+/**
+ * Authenticated shell layout providing the global top `AppBar`, personalized
+ * operator greeting (`Hello <firstName>`), light/dark theme toggle, and session
+ * termination (`Log Out`) action.
+ */
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
 

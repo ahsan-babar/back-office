@@ -4,6 +4,16 @@ import { Navigate } from 'react-router-dom';
 import { APP_ROUTES } from '../config/constants';
 import { useAuth } from '../hooks/useAuth';
 
+/**
+ * Route guard protecting authenticated administration views (`/users`).
+ *
+ * Behavior:
+ * - Displays a centered loading spinner while initial session hydration is in flight.
+ * - Redirects explicitly logged-out or session-revoked users to `/signin`.
+ * - Redirects fresh unauthenticated visitors to `/signup`.
+ *
+ * @param props.children - Protected page tree rendered when an active user session exists.
+ */
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, isLoading, wasLoggedOut } = useAuth();
 

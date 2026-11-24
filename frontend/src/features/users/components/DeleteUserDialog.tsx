@@ -9,13 +9,26 @@ import {
 import { UI_MESSAGES } from '../../../config/constants';
 import { User } from '../../../types/domain';
 
+/**
+ * Props for {@link DeleteUserDialog}.
+ */
 interface DeleteUserDialogProps {
+  /** User scheduled for deletion, or `null` when the confirmation dialog is closed. */
   targetUser: User | null;
+  /** `true` while the `DELETE /api/users/:id` request is in flight, disabling action buttons. */
   deleting: boolean;
+  /** Callback invoked when the operator cancels or dismisses the dialog. */
   onCancel: () => void;
+  /** Async handler invoked when the operator confirms permanent user deletion. */
   onConfirm: () => Promise<void>;
 }
 
+/**
+ * Confirmation modal prompting the operator before permanently deleting a user account
+ * and revoking all of their active sessions.
+ *
+ * @param props - Target user details, loading state, and confirmation/cancel handlers.
+ */
 export function DeleteUserDialog({
   targetUser,
   deleting,

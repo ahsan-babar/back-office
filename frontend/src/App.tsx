@@ -10,6 +10,12 @@ const theme = createTheme({
   },
 });
 
+/**
+ * Root application component composing global providers in dependency order:
+ * 1. {@link AppThemeProvider} — Manages persisted light/dark palette mode, MUI `ThemeProvider`, and `CssBaseline`.
+ * 2. {@link AuthProvider} — Manages session hydration, sign-in/sign-up, logout, and global `401` handling.
+ * 3. {@link AppRoutes} — Declares public (`/signin`, `/signup`) and session-guarded (`/users`) routes.
+ */
 export function App() {
   return (
     <ThemeProvider theme={theme}>

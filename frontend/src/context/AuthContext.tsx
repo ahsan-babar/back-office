@@ -16,24 +16,45 @@ import {
 } from '../services/apiClient';
 import { Session, SignInPayload, SignUpPayload, User } from '../types/domain';
 
+/**
+ * Shape of the authentication state and actions exposed to the React component tree.
+ */
 interface AuthContextValue {
+  /** Currently authenticated user profile, or `null` when unauthenticated. */
   user: User | null;
+  /** Active backend session metadata, or `null` when no session exists. */
   session: Session | null;
+  /** `true` while hydrating an existing stored session on initial application load. */
   isLoading: boolean;
+  /**
+   * Synchronously reports whether the current unauthenticated state resulted from
+   * an explicit logout or an HTTP 401 session revocation (used by `ProtectedRoute`
+   * to route logged-out users to `/signin` while routing fresh visitors to `/signup`).
+   */
   wasLoggedOut: () => boolean;
+  /** Authenticates an existing active user and persists the resulting session ID. */
   signIn: (payload: SignInPayload) => Promise<void>;
+  /** Registers a new user account, opens an initial session, and persists its ID. */
   signUp: (payload: SignUpPayload) => Promise<void>;
+  /** Terminates the active session on the backend and clears local client state. */
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+/**
+ * Top-level authentication provider managing session hydration, sign-in/sign-up,
+ * explicit logout, and global `401 Unauthorized` event handling.
+ *
+ * @param props.children - Descendant route and UI components requiring auth context.
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(() => Boolean(getStoredSessionId()));
   const loggedOutRef = useRef<boolean>(false);
 
+  // Hydrate an existing session from localStorage on initial mount.
   useEffect(() => {
     const existingSessionId = getStoredSessionId();
     if (!existingSessionId) return;
@@ -61,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // React to global 401 responses emitted by the API client (e.g., revoked session).
   useEffect(() => {
     const handleUnauthorized = () => {
       loggedOutRef.current = true;
@@ -90,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Set synchronously prior to async termination/state reset to avoid route race conditions.    
     const activeSessionId = session?.id ?? getStoredSessionId();
     loggedOutRef.current = true;
     try {
@@ -111,6 +134,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+/**
+ * Custom hook providing type-safe access to {@link AuthContextValue}.
+ *
+ * @throws {Error} When invoked outside of an {@link AuthProvider} tree.
+ */
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {

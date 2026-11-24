@@ -21,14 +21,33 @@ import {
   UserStatus,
 } from '../../../types/domain';
 
+/**
+ * Props for {@link UserFormModal}.
+ */
 interface UserFormModalProps {
+  /** Controls visibility of the modal dialog. */
   open: boolean;
+  /** Target user record when editing, or `null` when creating a new user. */
   editingUser: User | null;
+  /** Callback invoked when the modal is dismissed or after a successful submission. */
   onClose: () => void;
+  /** Async handler invoked to create a new user record. */
   onCreate: (payload: CreateUserPayload) => Promise<void>;
+  /** Async handler invoked to persist updates to an existing user record. */
   onUpdate: (id: string, payload: UpdateUserPayload) => Promise<void>;
 }
 
+/**
+ * Modal dialog supporting both user creation and user editing workflows.
+ *
+ * Domain rules enforced in the UI:
+ * - Password input is rendered only during user creation (`!isEditMode`).
+ * - When editing a user whose current status is `'inactive'`, `firstName` and
+ *   `lastName` fields are locked (`disabled`) and omitted from the `PATCH` payload
+ *   to align with backend domain invariants.
+ *
+ * @param props - Modal visibility, target user, and CRUD submission callbacks.
+ */
 export function UserFormModal({
   open,
   editingUser,
@@ -47,6 +66,7 @@ export function UserFormModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Reset form fields and clear prior errors whenever the dialog opens or target user changes.
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -65,6 +85,10 @@ export function UserFormModal({
     }
   }, [open, editingUser]);
 
+  /**
+   * Validates and submits either a `createUser` or `updateUser` request,
+   * surfacing API error messages inline if the request fails.
+   */ 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);

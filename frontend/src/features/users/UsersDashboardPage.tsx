@@ -36,6 +36,13 @@ import {
 import { DeleteUserDialog } from './components/DeleteUserDialog';
 import { UserFormModal } from './components/UserFormModal';
 
+/**
+ * Primary back-office administration view (`/users`) displaying a paginated directory
+ * of users (`6` per page) along with modal workflows to create, edit, and delete accounts.
+ *
+ * Automatically adjusts pagination backward if deleting the final item on a page leaves
+ * that page empty.
+ */
 export function UsersDashboardPage() {
   const [page, setPage] = useState<number>(PAGINATION_CONFIG.DEFAULT_PAGE);
   const [data, setData] = useState<PaginatedUsersResponse | null>(null);
@@ -48,6 +55,7 @@ export function UsersDashboardPage() {
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  /** Fetches the requested page of users and manages loading/error banner state. */
   const loadUsers = useCallback(async (targetPage: number) => {
     setLoading(true);
     setError(null);
@@ -65,6 +73,7 @@ export function UsersDashboardPage() {
     loadUsers(page);
   }, [page, loadUsers]);
 
+  /** Creates a new user and resets pagination to page 1 so the newest entry is visible. */
   const handleCreate = async (payload: CreateUserPayload) => {
     await apiClient.createUser(payload);
     if (page !== 1) {
@@ -74,11 +83,15 @@ export function UsersDashboardPage() {
     }
   };
 
+  /** Persists edits for an existing user and refreshes the current table page. */
   const handleUpdate = async (id: string, payload: UpdateUserPayload) => {
     await apiClient.updateUser(id, payload);
     await loadUsers(page);
   };
 
+  /**
+   * Deletes the targeted user and steps back one page when the current page becomes empty.
+   */
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);

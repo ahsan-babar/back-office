@@ -15,6 +15,13 @@ import { ThemeToggleButton } from '../../components/ThemeToggleButton';
 import { APP_ROUTES, PASSWORD_MIN_LENGTH, UI_MESSAGES } from '../../config/constants';
 import { useAuth } from '../../hooks/useAuth';
 
+/**
+ * Operator registration view (`/signup`) allowing new administrators to create an
+ * account, verify password confirmation, and immediately open an authenticated session.
+ *
+ * Redirects already-authenticated users immediately to `/users`, provides a navigation
+ * link to `/signin` for existing operators, and includes the global theme toggle.
+ */
 export function SignUpPage() {
   const { user, signUp } = useAuth();
   const navigate = useNavigate();
